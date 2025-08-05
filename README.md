@@ -16,5 +16,5 @@ Recognizeボタンでキューブを認識できます。スペースボタン�
 pycharm環境で開発していましたが、IDLEやVScode環境を試すとエラー（クラッシュ）が多発しました。
 クラッシュが続く場合はpycharmを使用してみてください。
 ```
-![GUI画面](./assets/demo.png)
-![画像認識](./assets/recognition.png)
+<img src="./assets/demo.png" width="300"/>
+<img src="./assets/recognition.png" width="400"/>
