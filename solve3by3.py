@@ -10,25 +10,24 @@ import threading
 from math import factorial, comb
 import time
 import timeout_decorator
+from pathlib import Path
 
 # 3×3 コーナー、エッジの位置と向きだけで表現する版
 
 class RubiksCube:
-    def __init__(self):
+    def __init__(self, root):
         self.rubiks = [[[None for _ in range(3)] for _ in range(3)] for _ in range(6)]
         self.cp = [0, 1, 2, 3, 4, 5, 6, 7] # コーナーの位置
         self.co = [0, 0, 0, 0, 0, 0, 0, 0] # コーナーの向き (0=正しい向き, 1=反時計回り, 2=時計回り)
         self.ep = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] # エッジの位置
         self.eo = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # エッジの向き (0=正しい向き, 1=逆向き)
 
-        root = Tk() # tkinterのキャンバスを作成
-        canvas = Canvas(root, width=600, height=750)
+        self.root = root
+        self.canvas = Canvas(self.root, width=600, height=750)
 
-        self.scramble_label = Label(root, text="                                  ", fg="black", bg="white",
+        self.scramble_label = Label(self.root, text="                                  ", fg="black", bg="white",
                                font=("Arial", 18, "bold"))
         self.scramble_label.place(x=25, y=700)
-        self.root = root
-        self.canvas = canvas
 
         self.max_steps = 24 # 最大許容手数、探索を続ける最大の手数
         self.arrays_copy = []
@@ -82,11 +81,12 @@ class RubiksCube:
 
         solve_tpa_set_limit_botton = Button(root, text="TPA with limit", width=12, height=2, command=lambda: self.solve("tpa_set_limit"))
         solve_tpa_set_limit_botton.place(x=440, y=650)
+
+        self.canvas.pack()
         self.draw()
 
     def draw(self):
         self.canvas.delete("all") # 描画をクリア
-        self.canvas.pack()
 
         self.rubiks = self.edge_corner_to_arrays(self.cp, self.co, self.ep, self.eo) # 配列を変換
         
@@ -124,8 +124,6 @@ class RubiksCube:
         self.canvas.create_rectangle(sp_x + side * 3 + space, sp_y + side * 3 + space, sp_x + side * 6 + space, sp_y + side * 6 + space, width=3)
         self.canvas.create_rectangle(sp_x + side * 6 + space * 2, sp_y + side * 3 + space, sp_x + side * 9 + space * 2, sp_y + side * 6 + space, width=3)
         self.canvas.create_rectangle(sp_x, sp_y + side * 6 + space * 2, sp_x + side * 3, sp_y + side * 9 + space * 2, width=3)
-
-        self.canvas.mainloop()
 
 
     # 回転
@@ -431,11 +429,11 @@ class RubiksCube:
         if method == "random":
             self.solve_random()
         elif method == "brute_force":
-            thread = threading.Thread(target=self.start_brute_force())  # 探索は別スレッドで実行することでreturnされるように
+            thread = threading.Thread(target=self.start_brute_force)  # 探索は別スレッドで実行することでreturnされるように
             thread.start()
         elif method == "tpa":
             self.is_greedy = True # 貪欲法を使う
-            thread = threading.Thread(target=self.tpa_start())
+            thread = threading.Thread(target=self.tpa_start)
             thread.start()
         elif method == "tpa_set_limit": # 時間制限を指定できるTPA
             self.is_greedy = False
@@ -722,31 +720,34 @@ EDGE_FACE_POSITIONS = [
 ]
 
 # 遷移表の読み込み
-with open("transition_table/co_transition_table.csv", mode='r') as f:
+BASE_DIR = Path(__file__).resolve().parent # 基準ディレクトリ
+TRANSITION_TABLE_DIR = BASE_DIR / "transition_table"
+with open(TRANSITION_TABLE_DIR / "co_transition_table.csv", mode='r') as f:
     CO_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open("transition_table/eo_transition_table.csv", mode='r') as f:
+with open(TRANSITION_TABLE_DIR / "eo_transition_table.csv", mode='r') as f:
     EO_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open ("transition_table/udslicecomb_transition_table.csv") as f:
+with open (TRANSITION_TABLE_DIR / "udslicecomb_transition_table.csv") as f:
     UDSLICECOMB_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open("transition_table/phase2_cp_transition_table.csv", mode='r') as f:
+with open(TRANSITION_TABLE_DIR / "phase2_cp_transition_table.csv", mode='r') as f:
     PHASE2_CP_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open("transition_table/phase2_ud_transition_table.csv", mode='r') as f:
+with open(TRANSITION_TABLE_DIR / "phase2_ud_transition_table.csv", mode='r') as f:
     PHASE2_UD_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open("transition_table/phase2_udslice_transition_table.csv", mode='r') as f:
+with open(TRANSITION_TABLE_DIR / "phase2_udslice_transition_table.csv", mode='r') as f:
     PHASE2_UDSLICE_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
 
 # phase1枝刈り表の読み込み
-with open("prune_table/co_udslicecomb_prune_table.csv", mode='r') as f:
+PRUNE_TABLE_DIR = BASE_DIR / "prune_table"
+with open(PRUNE_TABLE_DIR / "co_udslicecomb_prune_table.csv", mode='r') as f:
     CO_UDSLICECOMB_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open("prune_table/eo_udslicecomb_prune_table.csv", mode='r') as f:
+with open(PRUNE_TABLE_DIR / "eo_udslicecomb_prune_table.csv", mode='r') as f:
     EO_UDSLICECOMB_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open("prune_table/eo_co_prune_table.csv", mode='r') as f:
+with open(PRUNE_TABLE_DIR / "eo_co_prune_table.csv", mode='r') as f:
     EO_CO_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
 
 # phase2枝刈り表の読み込み 使える手数が少ないため、ファイル名にtpaを付けて区別している
-with open("prune_table/phase2_cp_udslice_prune_table.csv", mode='r') as f:
+with open(PRUNE_TABLE_DIR / "phase2_cp_udslice_prune_table.csv", mode='r') as f:
     PHASE2_CP_UDSLICE_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open("prune_table/phase2_ud_udslice_prune_table.csv", mode='r') as f:
+with open(PRUNE_TABLE_DIR / "phase2_ud_udslice_prune_table.csv", mode='r') as f:
     PHASE2_UD_UDSLICE_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
 
 # TwoPhase Algorithmのphase1で使用する手

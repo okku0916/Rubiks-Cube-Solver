@@ -13,10 +13,20 @@ __init__.pyを実行することでプログラムを起動できます。
 Recognizeボタンでキューブを認識できます。スペースボタンで一面ずつ認識します。
 展開図通りの向きで認識しなければならないことに注意が必要です。
 Matplotlibによる3D表示も可能です。
-
-pycharm環境で開発していましたが、IDLEやVScode環境を試すとエラー（クラッシュ）が多発しました。
-クラッシュが続く場合はpycharmを使用してみてください。
+Two-Phase Algorithm, Brute Forceなど複数の方法で解を探索することが可能です。
 ```
+
+# 解法一覧
+- **Random**
+: ランダムに回転することで解を求める
+- **Brute Force**
+: 総当たりで解を求める
+- **TPA(Greedy)**
+: Two-Phase Algorithmで最も早く発見された解を表示する
+- **TPA with limit**
+: 制限時間を自分で設定し、その時間で見つかった中での最短手を表示する
+
+# 実行画面
 <img src="./assets/demo.png" width="300"/>
 <img src="./assets/recognition.png" width="400"/>
 

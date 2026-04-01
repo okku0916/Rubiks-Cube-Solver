@@ -3,7 +3,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 # %matplotlib notebook
-matplotlib.use("MacOSX") # pycharmで実行するための記述 TkAggでも可
+matplotlib.use("TkAgg")
 
 def draw_cube(ax, position, colors):
     # 立方体の頂点座標を定義
