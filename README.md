@@ -5,7 +5,6 @@ Pythonで3×3ルービックキューブをGUIで操作、表示することが�
 - Numpy
 - Matplotlib
 - OpenCV
-- timeout-decorator
 
 # 使用方法
 ```bash
@@ -20,7 +19,7 @@ Two-Phase Algorithm, Brute Forceなど複数の方法で解を探索すること
 - **Random**
 : ランダムに回転することで解を求める
 - **Brute Force**
-: 総当たりで解を求める
+: 枝刈りなしの総当たりで解を求める
 - **TPA(Greedy)**
 : Two-Phase Algorithmで最も早く発見された解を表示する
 - **TPA with limit**
