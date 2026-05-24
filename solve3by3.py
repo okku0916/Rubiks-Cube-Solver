@@ -1,4 +1,4 @@
-from tkinter import *
+import tkinter as tk
 from tkinter import messagebox
 import tkinter.simpledialog as simpledialog
 from plot_3d import *
@@ -9,10 +9,17 @@ import copy
 import threading
 from math import factorial, comb
 import time
-import timeout_decorator
 from pathlib import Path
 
 # 3×3 コーナー、エッジの位置と向きだけで表現する版
+
+# 探索時間切れ時に投げる例外
+class SearchTimeout(Exception):
+    pass
+
+# 探索キャンセル時に投げる例外
+class SearchCancel(Exception):
+    pass
 
 class RubiksCube:
     def __init__(self, root):
@@ -23,63 +30,66 @@ class RubiksCube:
         self.eo = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # エッジの向き (0=正しい向き, 1=逆向き)
 
         self.root = root
-        self.canvas = Canvas(self.root, width=600, height=750)
+        self.canvas = tk.Canvas(self.root, width=600, height=750)
 
-        self.scramble_label = Label(self.root, text="                                  ", fg="black", bg="white",
+        self.scramble_label = tk.Label(self.root, text="                                  ", fg="black", bg="white",
                                font=("Arial", 18, "bold"))
         self.scramble_label.place(x=25, y=700)
+        self.progress_win = None
 
         self.max_steps = 24 # 最大許容手数、探索を続ける最大の手数
         self.arrays_copy = []
         self.solutions = [] # 解法を保存するリスト
         self.min_steps = 10000 # 最善手の手数
         self.is_greedy = False # 貪欲法を使うかどうか
+        self.time_limit = 1
+        self.cancel_flag = False
 
 
-        U = Button(self.root, text="U", width=4, height=2, command=lambda: self.rotate("U", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        U = tk.Button(self.root, text="U", width=4, height=2, command=lambda: self.rotate("U", 1, True, [self.cp, self.co, self.ep, self.eo]))
         U.place(x=25, y=450)
-        R = Button(self.root, text="R", width=4, height=2, command=lambda: self.rotate("R", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        R = tk.Button(self.root, text="R", width=4, height=2, command=lambda: self.rotate("R", 1, True, [self.cp, self.co, self.ep, self.eo]))
         R.place(x=100, y=450)
-        L = Button(self.root, text="L", width=4, height=2, command=lambda: self.rotate("L", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        L = tk.Button(self.root, text="L", width=4, height=2, command=lambda: self.rotate("L", 1, True, [self.cp, self.co, self.ep, self.eo]))
         L.place(x=175, y=450)
-        F = Button(self.root, text="F", width=4, height=2, command=lambda: self.rotate("F", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        F = tk.Button(self.root, text="F", width=4, height=2, command=lambda: self.rotate("F", 1, True, [self.cp, self.co, self.ep, self.eo]))
         F.place(x=250, y=450)
-        B = Button(self.root, text="B", width=4, height=2, command=lambda: self.rotate("B", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        B = tk.Button(self.root, text="B", width=4, height=2, command=lambda: self.rotate("B", 1, True, [self.cp, self.co, self.ep, self.eo]))
         B.place(x=325, y=450)
-        D = Button(self.root, text="D", width=4, height=2, command=lambda: self.rotate("D", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        D = tk.Button(self.root, text="D", width=4, height=2, command=lambda: self.rotate("D", 1, True, [self.cp, self.co, self.ep, self.eo]))
         D.place(x=400, y=450)
-        U3 = Button(self.root, text="U'", width=4, height=2, command=lambda: self.rotate("U'", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        U3 = tk.Button(self.root, text="U'", width=4, height=2, command=lambda: self.rotate("U'", 1, True, [self.cp, self.co, self.ep, self.eo]))
         U3.place(x=25, y=500)
-        R3 = Button(self.root, text="R'", width=4, height=2, command=lambda: self.rotate("R'", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        R3 = tk.Button(self.root, text="R'", width=4, height=2, command=lambda: self.rotate("R'", 1, True, [self.cp, self.co, self.ep, self.eo]))
         R3.place(x=100, y=500)
-        L3 = Button(self.root, text="L'", width=4, height=2, command=lambda:self.rotate("L'", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        L3 = tk.Button(self.root, text="L'", width=4, height=2, command=lambda:self.rotate("L'", 1, True, [self.cp, self.co, self.ep, self.eo]))
         L3.place(x=175, y=500)
-        F3 = Button(self.root, text="F'", width=4, height=2, command=lambda: self.rotate("F'", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        F3 = tk.Button(self.root, text="F'", width=4, height=2, command=lambda: self.rotate("F'", 1, True, [self.cp, self.co, self.ep, self.eo]))
         F3.place(x=250, y=500)
-        B3 = Button(self.root, text="B'", width=4, height=2, command=lambda: self.rotate("B'", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        B3 = tk.Button(self.root, text="B'", width=4, height=2, command=lambda: self.rotate("B'", 1, True, [self.cp, self.co, self.ep, self.eo]))
         B3.place(x=325, y=500)
-        D3 = Button(self.root, text="D'", width=4, height=2, command=lambda: self.rotate("D'", 1, True, [self.cp, self.co, self.ep, self.eo]))
+        D3 = tk.Button(self.root, text="D'", width=4, height=2, command=lambda: self.rotate("D'", 1, True, [self.cp, self.co, self.ep, self.eo]))
         D3.place(x=400, y=500)
 
-        plot3d = Button(self.root, text="3D", width=8, height=5, command=lambda: plot_3d(self.rubiks))
+        plot3d = tk.Button(self.root, text="3D", width=8, height=5, command=lambda: plot_3d(self.rubiks))
         plot3d.place(x=450, y=20)
 
-        scramble_botton = Button(self.root, text="Generate Scramble", width=12, height=2, command=lambda: self.scramble())
+        scramble_botton = tk.Button(self.root, text="Generate Scramble", width=12, height=2, command=lambda: self.scramble())
         scramble_botton.place(x=25, y=600)
 
-        recognition_button = Button(self.root, text="Recognize", width=5, height=2, command=lambda: self.start_recognition())
+        recognition_button = tk.Button(self.root, text="Recognize", width=5, height=2, command=lambda: self.start_recognition())
         recognition_button.place(x=175, y=600)
 
-        solve_random_botton = Button(root, text="Random", width=4, height=2, command=lambda: self.solve("random"))
+        solve_random_botton = tk.Button(root, text="Random", width=4, height=2, command=lambda: self.solve("random"))
         solve_random_botton.place(x=260, y=600)
 
-        solve_brute_force_botton = Button(root, text="Brute Force", width=7, height=2, command=lambda: self.solve("brute_force"))
+        solve_brute_force_botton = tk.Button(root, text="Brute Force", width=7, height=2, command=lambda: self.solve("brute_force"))
         solve_brute_force_botton.place(x=335, y=600)
 
-        solve_tpa_botton = Button(root, text="TPA(Greedy)", width=12, height=2, command=lambda: self.solve("tpa"))
+        solve_tpa_botton = tk.Button(root, text="TPA(Greedy)", width=12, height=2, command=lambda: self.solve("tpa"))
         solve_tpa_botton.place(x=440, y=600)
 
-        solve_tpa_set_limit_botton = Button(root, text="TPA with limit", width=12, height=2, command=lambda: self.solve("tpa_set_limit"))
+        solve_tpa_set_limit_botton = tk.Button(root, text="TPA with limit", width=12, height=2, command=lambda: self.solve("tpa_set_limit"))
         solve_tpa_set_limit_botton.place(x=440, y=650)
 
         self.canvas.pack()
@@ -437,9 +447,17 @@ class RubiksCube:
             thread.start()
         elif method == "tpa_set_limit": # 時間制限を指定できるTPA
             self.is_greedy = False
-            time_limit = int(simpledialog.askstring("Set Time Limit", "時間制限を秒で入力してください(例: 60)"))
-            self.start_time = time.perf_counter()
-            self.tpa_start(time_limit)
+            time_limit = simpledialog.askstring("Set Time Limit", "時間制限を秒で入力してください(例: 60)")
+            if time_limit is not None:
+                try:
+                    time_limit = int(time_limit)
+                    if (time_limit <= 0):
+                        raise ValueError
+                    self.start_time = time.perf_counter()
+                    thread = threading.Thread(target=lambda: self.tpa_start(time_limit))
+                    thread.start()
+                except ValueError:
+                    print("エラー：正しい数値を入力してください。")
 
 
     def solve_random(self):
@@ -518,21 +536,27 @@ class RubiksCube:
         self.arrays_copy = []
         self.solutions = [] # 解法を保存するリスト
         self.min_steps = 10000 # 最善手の手数
+        self.time_limit = time_limit
+        self.show_progress_window()
 
-        if self.is_greedy: # 一番初めに見つけた解を出力する場合
+        try:
             self.tpa_start_search1()
-        else:
-            @timeout_decorator.timeout(time_limit) # 時間制限
-            def do():
-                self.tpa_start_search1()
-            try:
-                do()
-            except timeout_decorator.TimeoutError:
-                print("制限時間に達しました。探索を終了します。")
+        except SearchTimeout:
+            print("制限時間に達しました。探索を終了します。")
+        except SearchCancel:
+            print("キャンセルされました。")
+            self.cancel_flag = False
+            self.close_progress_window()
+            return
 
+        self.close_progress_window()
+
+        if not self.solutions:
+            messagebox.showwarning("エラー", f"{self.time_limit}秒では解が見つかりませんでした。")
+            print(f"{self.time_limit}秒では解が見つかりませんでした。")
+            return
 
         elapsed_time = time.perf_counter() - self.start_time
-
         min_solution = [] # 最善手
         for steps in self.solutions:
             if len(steps) == self.min_steps:
@@ -592,6 +616,15 @@ class RubiksCube:
             # print(f"elapsed_time: {elapsed_time:.3f} seconds")
 
     def tpa_search1(self, depth, phase1_steps, co_index, eo_index, udslice_comb_index):
+        # 時間切れ例外を投げる
+        if not self.is_greedy:
+            if time.perf_counter() - self.start_time >= self.time_limit:
+                raise SearchTimeout()
+            
+        # キャンセル処理
+        if self.cancel_flag:
+            raise SearchCancel()
+        
         if depth == 0 and eo_index == 0 and co_index == 0 and udslice_comb_index == 0: # phase1の終了条件
             if not phase1_steps or phase1_steps[-1] in ["R", "L", "F", "B", "R'", "L'", "F'", "B'"]: # これら以外ではeo,co,udslicecombは変化しないため冗長な手順が発生する
                 self.arrays_copy = copy.deepcopy([self.cp, self.co, self.ep, self.eo])
@@ -624,6 +657,15 @@ class RubiksCube:
         return False
 
     def tpa_search2(self, depth, phase1_steps, phase2_steps, cp_index, ud_ep_index, udslice_ep_index):
+        # 時間切れ例外を投げる
+        if not self.is_greedy:
+            if time.perf_counter() - self.start_time >= self.time_limit:
+                raise SearchTimeout()
+
+        # キャンセル処理
+        if self.cancel_flag:
+            raise SearchCancel()
+
         if depth == 0 and cp_index == 0 and ud_ep_index == 0 and udslice_ep_index == 0:
             print(f"{len(phase1_steps + phase2_steps)} steps (phase1:{len(phase1_steps)}, phase2:{len(phase2_steps)}), {phase1_steps + phase2_steps}, elapsed_time: {time.perf_counter() - self.start_time:.3f} sec")
             self.min_steps = min(self.min_steps, len(phase1_steps + phase2_steps)) # 最善手の手数を更新
@@ -650,6 +692,31 @@ class RubiksCube:
             if self.tpa_search2(depth - 1, phase1_steps, phase2_steps + [step], next_cp_index, next_ud_ep_index, next_udslice_ep_index):
                 return True
         return False
+
+    def show_progress_window(self):
+        if self.progress_win is not None:
+            return
+        # メイン画面の上に新しいウィンドウを作成
+        self.progress_win = tk.Toplevel(self.root)
+        self.progress_win.title("探索中")
+        self.progress_win.geometry("200x100")
+        
+        tk.Label(self.progress_win, text="最適解を探索しています...").pack(pady=10)
+        
+        # このウィンドウ以外の操作をすべてブロックする
+        self.progress_win.grab_set()
+
+        cancel_btn = tk.Button(self.progress_win, text="キャンセル", command=self.cancel_search)
+        cancel_btn.pack()
+
+    def close_progress_window(self):
+        if self.progress_win is not None:
+            self.progress_win.grab_release() # ブロック解除
+            self.progress_win.destroy()      # ウィンドウを破棄
+            self.progress_win = None
+        
+    def cancel_search(self):
+        self.cancel_flag = True
 
     def test(self):
         self.cp = [0, 1, 2, 3, 4, 5, 6, 7] # コーナーの位置
