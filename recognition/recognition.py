@@ -39,6 +39,10 @@ class CubeRecognition:
             #カメラからの画像取得
             ret, frame = cap.read()
 
+            if not ret or frame is None:
+                print("カメラからフレームを取得できませんでした。カメラの接続や権限を確認してください。")
+                return None 
+
             frame = cv2.flip(frame, 1)  # 水平反転
 
             # ルービックキューブ描画するための空間を作成
