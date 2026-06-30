@@ -1,4 +1,5 @@
 from pathlib import Path
+import numpy as np
 
 INVERSE = {"U": "D", "D": "U", "L": "R", "R": "L", "F": "B", "B": "F"} # 逆面
 
@@ -54,33 +55,23 @@ EDGE_FACE_POSITIONS = [
 # 遷移表の読み込み
 BASE_DIR = Path(__file__).resolve().parent.parent # 基準ディレクトリ
 TRANSITION_TABLE_DIR = BASE_DIR / "data" / "transition_table"
-with open(TRANSITION_TABLE_DIR / "co_transition_table.csv", mode='r') as f:
-    CO_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open(TRANSITION_TABLE_DIR / "eo_transition_table.csv", mode='r') as f:
-    EO_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open (TRANSITION_TABLE_DIR / "udslicecomb_transition_table.csv") as f:
-    UDSLICECOMB_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open(TRANSITION_TABLE_DIR / "phase2_cp_transition_table.csv", mode='r') as f:
-    PHASE2_CP_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open(TRANSITION_TABLE_DIR / "phase2_ud_transition_table.csv", mode='r') as f:
-    PHASE2_UD_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open(TRANSITION_TABLE_DIR / "phase2_udslice_transition_table.csv", mode='r') as f:
-    PHASE2_UDSLICE_TRANSITION_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
+CO_TRANSITION_TABLE = np.load(TRANSITION_TABLE_DIR / "co_transition_table.npy")
+EO_TRANSITION_TABLE = np.load(TRANSITION_TABLE_DIR / "eo_transition_table.npy")
+UDSLICECOMB_TRANSITION_TABLE = np.load(TRANSITION_TABLE_DIR / "udslicecomb_transition_table.npy")
+PHASE2_CP_TRANSITION_TABLE = np.load(TRANSITION_TABLE_DIR / "phase2_cp_transition_table.npy")
+PHASE2_UD_TRANSITION_TABLE = np.load(TRANSITION_TABLE_DIR / "phase2_ud_transition_table.npy")
+PHASE2_UDSLICE_TRANSITION_TABLE = np.load(TRANSITION_TABLE_DIR / "phase2_udslice_transition_table.npy")
+
 
 # phase1枝刈り表の読み込み
 PRUNE_TABLE_DIR = BASE_DIR / "data" / "prune_table"
-with open(PRUNE_TABLE_DIR / "co_udslicecomb_prune_table.csv", mode='r') as f:
-    CO_UDSLICECOMB_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open(PRUNE_TABLE_DIR / "eo_udslicecomb_prune_table.csv", mode='r') as f:
-    EO_UDSLICECOMB_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open(PRUNE_TABLE_DIR / "eo_co_prune_table.csv", mode='r') as f:
-    EO_CO_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
+CO_UDSLICECOMB_PRUNE_TABLE = np.load(PRUNE_TABLE_DIR / "co_udslicecomb_prune_table.npy")
+EO_UDSLICECOMB_PRUNE_TABLE = np.load(PRUNE_TABLE_DIR / "eo_udslicecomb_prune_table.npy")
+EO_CO_PRUNE_TABLE = np.load(PRUNE_TABLE_DIR / "eo_co_prune_table.npy")
 
 # phase2枝刈り表の読み込み 使える手数が少ないため、ファイル名にtpaを付けて区別している
-with open(PRUNE_TABLE_DIR / "phase2_cp_udslice_prune_table.csv", mode='r') as f:
-    PHASE2_CP_UDSLICE_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
-with open(PRUNE_TABLE_DIR / "phase2_ud_udslice_prune_table.csv", mode='r') as f:
-    PHASE2_UD_UDSLICE_PRUNE_TABLE = [list(map(int, line.strip().split(','))) for line in f.readlines()]
+PHASE2_CP_UDSLICE_PRUNE_TABLE = np.load(PRUNE_TABLE_DIR / "phase2_cp_udslice_prune_table.npy")
+PHASE2_UD_UDSLICE_PRUNE_TABLE = np.load(PRUNE_TABLE_DIR / "phase2_ud_udslice_prune_table.npy")
 
 # TwoPhase Algorithmのphase1で使用する手
 TPA_PHASE1_STEPS = ["U", "R", "L", "F", "B", "D", "U'", "R'", "L'", "F'", "B'", "D'", "U2", "R2", "L2", "F2", "B2", "D2"]
